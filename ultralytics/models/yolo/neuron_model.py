@@ -1,8 +1,8 @@
-from .model import YOLO
+from ultralytics.engine.model_neuron import Model
 from ultralytics.models import yolo
 
 
-class NeuronYOLO(YOLO):
+class NeuronYOLO(Model):
     def __init__(self, model="yolov8n.pt", task=None, verbose=False):
         super().__init__(model, task, verbose)
 
