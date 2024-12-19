@@ -75,6 +75,8 @@ class AutoBackend(nn.Module):
             | PaddlePaddle          | *_paddle_model/   |
             | MNN                   | *.mnn             |
             | NCNN                  | *_ncnn_model/     |
+            | AWS NeuronX           | *.neuronx         |
+            | AWS Neuron            | *.neuron          |
 
     This class offers dynamic backend switching capabilities based on the input model format, making it easier to deploy
     models across various platforms.
@@ -125,6 +127,8 @@ class AutoBackend(nn.Module):
             ncnn,
             imx,
             triton,
+            neuronx,
+            neuron,
         ) = self._model_type(w)
         fp16 &= pt or jit or onnx or xml or engine or nn_module or triton  # FP16
         nhwc = coreml or saved_model or pb or tflite or edgetpu  # BHWC formats (vs torch BCWH)
@@ -176,7 +180,26 @@ class AutoBackend(nn.Module):
             model.half() if fp16 else model.float()
             if extra_files["config.txt"]:  # load metadata dict
                 metadata = json.loads(extra_files["config.txt"], object_hook=lambda x: dict(x.items()))
+        # NeuronX
+        elif neuronx:
+            import torch_neuronx
 
+            LOGGER.info(f"Loading {w} for NeuronX version {torch_neuronx.__version__} inference... ")
+            extra_files = {"config.txt": ""}  # model metadata
+            model = torch.jit.load(w, _extra_files=extra_files, map_location=device)
+            model.half() if fp16 else model.float()
+            if extra_files["config.txt"]:  # load metadata dict
+                metadata = json.loads(extra_files["config.txt"], object_hook=lambda x: dict(x.items()))
+        ## Neuron
+        elif neuron:
+            import torch_neuron
+
+            LOGGER.info(f"Loading {w} for Neuron version {torch_neuron.__version__} inference... ")
+            extra_files = {"config.txt": ""}  # model metadata
+            model = torch.jit.load(w, _extra_files=extra_files, map_location=device)
+            model.half() if fp16 else model.float()
+            if extra_files["config.txt"]:  # load metadata dict
+                metadata = json.loads(extra_files["config.txt"], object_hook=lambda x: dict(x.items()))
         # ONNX OpenCV DNN
         elif dnn:
             LOGGER.info(f"Loading {w} for ONNX OpenCV DNN inference...")
