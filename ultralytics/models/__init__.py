@@ -4,7 +4,7 @@ from .fastsam import FastSAM
 from .nas import NAS
 from .rtdetr import RTDETR
 from .sam import SAM
-from .yolo import YOLO, NeuronYOLO, YOLOWorld
+from .yolo import YOLO, YOLOWorld
 
 __all__ = (
     "YOLO",
@@ -12,5 +12,5 @@ __all__ = (
     "SAM",
     "FastSAM",
     "NAS",
-    "YOLOWorld, NeuronYOLO",
+    "YOLOWorld",
 )  # allow simpler import
