@@ -19,6 +19,8 @@ PaddlePaddle            | `paddle`                  | yolo11n_paddle_model/
 MNN                     | `mnn`                     | yolo11n.mnn
 NCNN                    | `ncnn`                    | yolo11n_ncnn_model/
 IMX                     | `imx`                     | yolo11n_imx_model/
+AWS NeuronX             | `neuronx`                 | yolo11n.neuronx
+AWS Neuron              | `neuron`                  | yolo11n.neuron
 
 Requirements:
     $ pip install "ultralytics[export]"
@@ -116,6 +118,8 @@ def export_formats():
         ["MNN", "mnn", ".mnn", True, True],
         ["NCNN", "ncnn", "_ncnn_model", True, True],
         ["IMX", "imx", "_imx_model", True, True],
+        ["AWS NeuronX", "neuronx", ".neuronx", True, True],
+        ["AWS Neuron", "neuron", ".neuron", True, True],
     ]
     return dict(zip(["Format", "Argument", "Suffix", "CPU", "GPU"], zip(*x)))
 
@@ -210,6 +214,8 @@ class Exporter:
             mnn,
             ncnn,
             imx,
+            neuronx,
+            neuron,
         ) = flags  # export booleans
         is_tf_format = any((saved_model, pb, tflite, edgetpu, tfjs))
 
@@ -382,6 +388,10 @@ class Exporter:
             f[12], _ = self.export_ncnn()
         if imx:
             f[13], _ = self.export_imx()
+        if neuronx:  # NeuronX
+            f[14], _ = self.export_neuronx()
+        if neuron:  # Neuron
+            f[15], _ = self.export_neuron()
 
         # Finish
         f = [str(x) for x in f if x]  # filter out '' and None
@@ -1231,6 +1241,30 @@ class Exporter:
         with open(f / "labels.txt", "w") as file:
             file.writelines([f"{name}\n" for _, name in self.model.names.items()])
 
+        return f, None
+    
+    @try_export
+    def export_neuronx(self, prefix=colorstr("AWS NeuronX:")):
+        import torch_neuronx
+
+        """YOLOv8 NeuronX model export."""
+        LOGGER.info(f"\n{prefix} starting export with torch {torch_neuronx.__version__}...")
+        f = self.file.with_suffix(".neuronx")
+        ts = torch_neuronx.trace(self.model, self.im, strict=False)
+        extra_files = {"config.txt": json.dumps(self.metadata)}  # torch._C.ExtraFilesMap()
+        ts.save(str(f), _extra_files=extra_files)
+        return f, None
+
+    @try_export
+    def export_neuron(self, prefix=colorstr("AWS Neuron:")):
+        import torch_neuron
+
+        """YOLOv8 Neuron model export."""
+        LOGGER.info(f"\n{prefix} starting export with torch {torch_neuron.__version__}...")
+        f = self.file.with_suffix(".neuron")
+        ts = torch_neuron.trace(self.model, self.im, strict=False)
+        extra_files = {"config.txt": json.dumps(self.metadata)}
+        ts.save(str(f), _extra_files=extra_files)
         return f, None
 
     def _add_tflite_metadata(self, file):
